@@ -7,6 +7,9 @@ using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
+using System.IO;
+using System.Diagnostics.Eventing.Reader;
 
 namespace BookWriterAI
 {
@@ -15,15 +18,33 @@ namespace BookWriterAI
     {
         ChatSession session = new ChatSession("", "");
         Book book = new Book();
-        ActList acts = new ActList();
-        ChapterList chapters = new ChapterList();
+        //ActList acts = new ActList();
+        //ChapterList chapters = new ChapterList();
         ContentNode bookIdea = new ContentNode();
         ContentNode bookOutline = new ContentNode();
-        double temperature = 0.8;
+        //double temperature = 0.8;
         int NumActs = 6;
         string CharacterSummary = "";
 
         private string configFilePath = "config.json";
+
+        public static string CreateFilenameFromString(string input)
+        {
+            // Replace any invalid characters with an underscore
+            string invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string validString = Regex.Replace(input, "[" + invalidChars + "]", "_");
+
+            // Replace multiple consecutive underscores with a single underscore
+            validString = Regex.Replace(validString, "_{2,}", "_");
+
+            // Replace spaces with underscores
+            validString = validString.Replace(' ', '_');
+
+            // Remove any leading or trailing underscores
+            validString = validString.Trim('_');
+
+            return validString;
+        }
 
         private void LoadConfiguration()
         {
@@ -37,7 +58,7 @@ namespace BookWriterAI
                 {
                     session._apiKey = config["ApiKey"].ToString();
                     session._model = config["Model"].ToString();
-                    temperature = double.Parse(config["Temperature"].ToString());
+                    session._temperature = double.Parse(config["Temperature"].ToString());
                 }
             }
         }
@@ -48,7 +69,7 @@ namespace BookWriterAI
             {
                 { "ApiKey", session._apiKey },
                 { "Model", session._model },
-                { "Temperature", temperature }
+                { "Temperature", session._temperature }
             };
 
             string json = JsonConvert.SerializeObject(config);
@@ -58,8 +79,12 @@ namespace BookWriterAI
         public Form1()
         {
             InitializeComponent();
-            chapters.Chapters = new List<Chapter>();
-            acts.Chapters = new List<Chapter>();
+
+            book = new Book();
+            book.BookTitle = "Untitled";
+
+            book.Chapters = new List<Chapter>();
+            book.Chapters = new List<Chapter>();
 
             string model = "gpt-4";
             string apiKey = "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";
@@ -88,6 +113,8 @@ namespace BookWriterAI
             jsonExportMenuItem.Click += jsonExportMenuItem_Click;
             jsonSave.Click += jsonSave_Click;
             jsonLoad.Click += jsonLoad_Click;
+
+
         }
 
 
@@ -96,7 +123,7 @@ namespace BookWriterAI
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.Filter = "Book Files (*.bk)|*.bk|All Files (*.*)|*.*";
             saveFileDialog.DefaultExt = "bk";
-            saveFileDialog.FileName = "untitled";
+            saveFileDialog.FileName = CreateFilenameFromString(book.BookTitle);
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
@@ -112,7 +139,7 @@ namespace BookWriterAI
 
             openFileDialog.Filter = "Book Files (*.bk)|*.bk|All Files (*.*)|*.*";
             openFileDialog.DefaultExt = "bk";
-            openFileDialog.FileName = "untitled";
+            openFileDialog.FileName = "";
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
@@ -129,6 +156,28 @@ namespace BookWriterAI
                 json = JsonConvert.SerializeObject(book.Chapters, Formatting.Indented);
                 ChapterTextBox.Text = json;
 
+                bookIdea = new ContentNode
+                {
+                    Depth = 0,
+                    Title = "Book Idea",
+                    Summary = book.ShortBookSummary,
+                    Context = "Book Idea: " + IdeaTextBox.Text
+                };
+
+                bookOutline = new ContentNode
+                {
+                    Depth = 1,
+                    Title = "Book Outline",
+                    Summary = book.ShortBookSummary,
+                    FullPlot = book.LongBookPlot,
+                    Context = "Book Outline: " + book.LongBookPlot
+                };
+
+                bookIdea.AddChild(bookOutline);
+
+                bookIdea.ContentGenerated += OnContentGenerated;
+                bookOutline.ContentGenerated += OnContentGenerated;
+
                 CharacterSummary = "Characters in this book: ";
 
                 foreach (var c in book.Characters)
@@ -136,11 +185,20 @@ namespace BookWriterAI
                     CharacterSummary += GenerateCharacterSummary(c);
                 }
 
+                GenerateActsButton.Enabled = true;
+                GenerateChapterButton.Enabled = true;
+
                 UpdateTreeViewBook();
                 UpdateTreeViewActs();
                 UpdateTreeViewChapters();
 
             }
+        }
+
+        private void OnContentGenerated(string content)
+        {
+            // Update the BookTextBox with the new content
+            BookTextBox.AppendText(content);
         }
 
         public void UpdateTreeViewBook()
@@ -161,9 +219,56 @@ namespace BookWriterAI
             treeView3.Nodes[0].Text = "Book - " + book.BookTitle;
         }
 
+        public string GenerateCharacterSummaryForChapter(Chapter inChapter)
+        {
+            List<CharacterDetail> charactersInChapter = GetCharacterDetailsForChapter(book, inChapter);
+
+            string CharacterSummary = "Characters in this chapter: ";
+
+            foreach (var c in charactersInChapter)
+            {
+                CharacterSummary += GenerateCharacterSummary(c);
+            }
+
+            UpdateCharacterIntroductionStatus(book, inChapter);
+
+            return CharacterSummary;
+        }
+
+        public void UpdateCharacterIntroductionStatus(Book book, Chapter chapter)
+        {
+            foreach (var characterId in chapter.CharactersPresent)
+            {
+                CharacterDetail characterDetail = book.Characters.FirstOrDefault(c => c.ID == characterId.ID);
+
+                int index = book.Characters.IndexOf(characterDetail);
+                CharacterDetail updatedCharacterDetail = characterDetail;
+                updatedCharacterDetail.AlreadyIntroduced = true;
+                book.Characters[index] = updatedCharacterDetail;
+
+            }
+        }
+
+        public List<CharacterDetail> GetCharacterDetailsForChapter(Book book, Chapter chapter)
+        {
+            List<CharacterDetail> characterDetails = new List<CharacterDetail>();
+
+            foreach (var characterId in chapter.CharactersPresent)
+            {
+                CharacterDetail characterDetail = book.Characters.FirstOrDefault(c => c.ID == characterId.ID);
+                 characterDetails.Add(characterDetail);
+            }
+
+            return characterDetails;
+        }
+
         public string GenerateCharacterSummary(CharacterDetail c)
         {
-            return (c.FirstName + " " + c.LastName + ", " + c.Age + " age, " + c.Gender + ". " + c.Appearance + ". ");
+            string introductionStatus = c.AlreadyIntroduced
+                ? "This character has already been introduced, so don't introduce again."
+                : "This is the first time seeing this character in the book, so make sure to introduce the character.";
+
+            return $"ID: {c.ID}) {c.FirstName} {c.LastName}, Age {c.Age}, {c.Gender}. {c.Appearance}. The {c.Role}. {introductionStatus}";
         }
 
         private void jsonExportMenuItem_Click(object? sender, EventArgs e)
@@ -187,14 +292,14 @@ namespace BookWriterAI
             // Set current values
             propertiesForm.ApiKey = session._apiKey;
             propertiesForm.Model = session._model;
-            propertiesForm.Temperature = temperature;
+            propertiesForm.Temperature = session._temperature;
 
             if (propertiesForm.ShowDialog() == DialogResult.OK)
             {
                 // Update values from the PropertiesForm
                 session._apiKey = propertiesForm.ApiKey;
                 session._model = propertiesForm.Model;
-                temperature = propertiesForm.Temperature;
+                session._temperature = propertiesForm.Temperature;
 
                 // Save the configuration to a file
                 SaveConfiguration();
@@ -210,6 +315,77 @@ namespace BookWriterAI
             GenerateIdeaButton.Enabled = false;
             GenerateActsButton.Enabled = false;
             GenerateChapterButton.Enabled = false;
+
+            string[] literaryStyles = new string[]
+            {
+                "Comedy",
+                "Drama",
+                "Epic",
+                "Horror",
+                "Mystery",
+                "Romance",
+                "Satire",
+                "Science Fiction",
+                "Fantasy",
+                "Thriller",
+                "Western",
+                "Adventure",
+                "Historical Fiction",
+                "Dystopian",
+                "Gothic",
+                "Magical Realism",
+                "Mythology",
+                "Fairy Tale",
+                "Crime",
+                "Biography"
+            };
+
+            StyleBox.Items.AddRange(literaryStyles);
+
+
+            string[] popularAuthors = new string[]
+{
+                "William Shakespeare",
+                "Agatha Christie",
+                "J.K. Rowling",
+                "Stephen King",
+                "Jane Austen",
+                "Charles Dickens",
+                "Ernest Hemingway",
+                "Mark Twain",
+                "George Orwell",
+                "F. Scott Fitzgerald",
+                "J.R.R. Tolkien",
+                "Virginia Woolf",
+                "Leo Tolstoy",
+                "James Joyce",
+                "Emily Bronte",
+                "Oscar Wilde",
+                "Haruki Murakami",
+                "Gabriel Garcia Marquez",
+                "John Steinbeck",
+                "Arthur Conan Doyle"
+};
+
+            string[] modernAuthors = new string[]
+            {
+                "Michael Crichton",
+                "Dan Brown",
+                "Nicholas Sparks",
+                "Jodi Picoult",
+                "Neil Gaiman",
+                "Khaled Hosseini",
+                "Gillian Flynn",
+                "Malcolm Gladwell",
+                "Yuval Noah Harari",
+                "Chimamanda Ngozi Adichie"
+            };
+
+            AuthorBox.Items.AddRange(popularAuthors);
+            AuthorBox.Items.AddRange(modernAuthors);
+
+
+
         }
 
         private async Task<string> SendMessageAsync(string message)
@@ -231,6 +407,7 @@ namespace BookWriterAI
             ProgressBar.Value = 0;
             bookIdea = new ContentNode
             {
+                Depth = 0,
                 Title = "Book Idea",
                 Summary = IdeaTextBox.Text,
                 Context = "Book Idea: " + IdeaTextBox.Text
@@ -276,6 +453,12 @@ namespace BookWriterAI
             }
         }
 
+        // Generates the tree-based method
+        private async void GenerateTreeButton_Click(object sender, EventArgs e)
+        {
+            await bookOutline.GenerateContent(session, 4, 0.8);
+        }
+
 
         private async void GenerateIdeaButton_Click(object sender, EventArgs e)
         {
@@ -284,7 +467,7 @@ namespace BookWriterAI
 
             ProgressBar.Value = 50;
 
-            ChatResponse response = await session.SendMessageAsync("Create a detailed plot for this book idea, of at least 250 pages: " + IdeaTextBox.Text + ". Return it in a JSON formatted string with fields, BookTitle, ShortBookSummary, LongBookPlot, SuggestedChapterCount (string), An array of Characters where each character has a FirstName, LastName, Age (string), Gender, ShortBio, FiveWordBio, Appearance.");
+            ChatResponse response = await session.SendMessageAsync("Create a detailed plot for this book idea, of at least 250 pages: " + IdeaTextBox.Text + ". In the variable LongBookPlot, create an overall arc, with subplots, surprises and twists throughout. Be very detailed. This is the summary of the entire book. Return it in a JSON formatted string with fields, BookTitle, ShortBookSummary, LongBookPlot, SuggestedChapterCount (string), An array of Characters where each character has a FirstName, LastName, Age (string), Gender, ShortBio, FiveWordBio (eg. The best friend of John), Appearance, Role (Protagonist, protagonist's friend, Antagonist, etc), ID (int, a unique ID for each character).");
 
             // Set JsonSerializerOptions to use camelCase
 
@@ -292,7 +475,17 @@ namespace BookWriterAI
 
             //var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             Debug.WriteLine(response.Choices[0].Message.Content);
-            book = JsonConvert.DeserializeObject<Book>(response.Choices[0].Message.Content); //, jsonOptions);
+            try
+            {
+                book = JsonConvert.DeserializeObject<Book>(response.Choices[0].Message.Content); //, jsonOptions);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error parsing JSON for detailed plot. " + ex.Message, "JSON Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ProgressBar.Value = 0;
+                return;
+            }
+
             //book.SuggestedChapterCount = "26"; // Temporary
             var json = JsonConvert.SerializeObject(book, Formatting.Indented);
 
@@ -317,11 +510,14 @@ namespace BookWriterAI
 
             bookOutline = new ContentNode
             {
+                Depth = 1,
                 Title = "Book Outline",
                 Summary = book.ShortBookSummary,
                 FullPlot = book.LongBookPlot,
                 Context = "Book Outline: " + book.LongBookPlot
             };
+
+            bookOutline.ContentGenerated += OnContentGenerated;
 
             bookIdea.AddChild(bookOutline);
         }
@@ -340,7 +536,7 @@ namespace BookWriterAI
             // Deserialize the response JSON to a ChatResponse object
             //var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-            acts = JsonConvert.DeserializeObject<ActList>(response.Choices[0].Message.Content); //, jsonOptions);
+            ActList acts = JsonConvert.DeserializeObject<ActList>(response.Choices[0].Message.Content); //, jsonOptions);
             var json = JsonConvert.SerializeObject(acts, Formatting.Indented);
             Debug.WriteLine(json);
             ActsText.Text = json;
@@ -377,16 +573,23 @@ namespace BookWriterAI
             int cCount = 1;
             int mult = 100 / NumActs;
 
-            for (int i = 0; i < acts.Acts.Count; i++)
+            if (book.Chapters != null)
+                book.Chapters.Clear();
+
+            book.Chapters = new List<Chapter>();
+
+            UpdateTreeViewChapters();
+
+            for (int i = 0; i < book.Acts.Count; i++)
             {
                 ProgressBar.Value = (i + 1) * mult;
 
                 int count = (int)MathF.Ceiling(float.Parse(book.SuggestedChapterCount) * percentages[i]);
-                string actContext = "This is Act " + (i + 1) + " out of 6 acts. The act's plot is: " + acts.Acts[i].ActFullPlot + ". ";
+                string actContext = "This is Act " + (i + 1) + " out of 6 acts. The act's plot is: " + book.Acts[i].ActFullPlot + ". ";
 
                 // Adding context for the last chapter of the act
                 string lastChapterContext = "";
-                if (i < acts.Acts.Count - 1)
+                if (i < book.Acts.Count - 1)
                 {
                     lastChapterContext = "The last chapter in this act should not wrap up the entire book or imply an ending, but rather transition smoothly into the next act.";
                 }
@@ -395,17 +598,18 @@ namespace BookWriterAI
                     lastChapterContext = "The last chapter in this act should serve as the conclusion to the entire book.";
                 }
 
-                ChatResponse response = await session.SendMessageAsync("Create " + count + " chapter outlines, starting at chapter " + cCount + " for act " + (i + 1) + " of a book. " + actContext + lastChapterContext + " Return it in a JSON formatted string with an array of chapters, each containing ChapterTitle, ChapterSummary, ChapterFullPlot");
+                ChatResponse response = await session.SendMessageAsync("Create " + count + " chapter outlines, starting at chapter " + cCount + " for act " + (i + 1) + " of a book. " + actContext + lastChapterContext + ". Think about which characters are present. Return it in a JSON formatted string with an array of chapters, each containing ChapterTitle, ChapterSummary, ChapterFullPlot, CurrentActNum (integer), CharactersPresent (Array) with property ID (int, the unique ID of the character from the book outline).");
 
                 cCount += count;
 
                 //var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                Debug.WriteLine(response.Choices[0].Message.Content);
                 ChapterList tchapters = JsonConvert.DeserializeObject<ChapterList>(response.Choices[0].Message.Content);
 
                 var json = JsonConvert.SerializeObject(tchapters, Formatting.Indented);
                 Debug.WriteLine(json);
                 ChapterTextBox.Text += json;
-                chapters.Chapters.AddRange(tchapters.Chapters);
+                book.Chapters.AddRange(tchapters.Chapters);
 
                 foreach (var chapter in tchapters.Chapters)
                 {
@@ -417,7 +621,7 @@ namespace BookWriterAI
                         Context = "Chapter: " + chapter.ChapterTitle
                     };
                     // Assuming you have a reference to the corresponding act node
-                    var t = bookIdea.FindNodeByTitle(acts.Acts[i].ActTitle);
+                    var t = bookIdea.FindNodeByTitle(book.Acts[i].ActTitle);
 
                     if (t != null)
                     {
@@ -429,7 +633,7 @@ namespace BookWriterAI
             }
 
             ProgressBar.Value = 0;
-            book.Chapters = chapters.Chapters;
+            //book.Chapters = chapters.Chapters;
             UpdateTreeViewBook();
             UpdateTreeViewChapters();
             GenerateChapterButton.Enabled = true;
@@ -459,63 +663,117 @@ namespace BookWriterAI
                 string chapterTitle = chapter.ChapterTitle;
                 string chapterContext = chapter.ChapterFullPlot;
 
-                BookTextBox.Text += Environment.NewLine + chapterTitle + Environment.NewLine + Environment.NewLine;
+                BookTextBox.Text += Environment.NewLine + chapterTitle + Environment.NewLine;
 
                 // Break down the chapter into subchapters (e.g., 3 subchapters)
 
                 string subchapterContent = ". ";
 
-                string BreakChapterString = "Break the following chapter into " + subchapterCount + " sections. The chapter is " + chapterTitle + " plot is " + chapterContext + ". Do not expand beyond the scope of the specified plot. Return the result as a JSON object with an array of 'Sections', with elements SectionName, SectionPlot, SectionDetailedPlot.";
+                //string BreakChapterString = "Break the following chapter into " + subchapterCount + " sections. The chapter is " + chapterTitle + " plot is " + chapterContext + ". Intelligently weave a connected plot between the sections. Do not expand beyond the scope of the specified plot. Output the result as a JSON object with an array of 'Sections', with elements SectionName, SectionPlot, SectionDetailedPlot.";
+                string BreakChapterString = "Break the following chapter into " + subchapterCount + " sections. The chapter is " + chapterTitle + " plot is " + chapterContext + ". Intelligently weave a connected plot between the sections. Do not expand beyond the scope of the specified plot. Output the section plot with 4 paragraphs, separated by periods, indicating what should happen throughout the section. Output the result as a JSON object with an array of 'Sections', with elements SectionName, SectionPlot, SectionDetailedPlot, An array CharactersPresent with FirstName, LastName, for which characters are in this chapter.";
 
-                ChatResponse subsectionResponse = await session.SendMessageAsync(BreakChapterString);
+                ChatResponse subsectionResponse;
+                try
+                {
+                    subsectionResponse = await session.SendMessageAsync(BreakChapterString);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error talking to server for base subsection creation. " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ProgressBar.Value = 0;
+                    break;
+                }
 
                 string subsectionContents = subsectionResponse.Choices[0].Message.Content.Trim();
 
-                Debug.WriteLine(subsectionContents);
-                SubSections sections = JsonConvert.DeserializeObject<SubSections>(subsectionContents);
+                string jsonPattern = @"^(\{(?:[^{}]|(?<o>\{)|(?<-o>\}))+(?(o)(?!))\})";
 
-                var chapterNode = bookIdea.FindNodeByTitle(chapterTitle);
-
-                int sc = 0;
-
-                foreach (var s in sections.Sections)
+                Match match = Regex.Match(subsectionContents, jsonPattern);
+                if (match.Success)
                 {
 
-                    ProgressBar.Value = osc * mult + 1;
+                    Debug.WriteLine(subsectionContents);
+                    SubSections sections;
 
-                    string subchapterPrompt = "Write the detailed narrative book prose of 500 words for this section of chapter " + (cc + 1) + ", where the section plot is: " + s.SectionDetailedPlot + ". Write about EXACTLY what is specified in the section plot, do not deviate or expand. For reference, the overall chapter is called " + chapterTitle + ". " + CharacterSummary;
-                    //string subchapterPrompt = "Write the detailed narrative book prose for part " + (i + 1) + " of " + subchapterCount + ", of the chapter titled '" + chapterTitle + "'. The chapter's plot is: " + chapterNode.FullPlot + ". Follow the previous section, which was:" + previousText;
-                    //string subchapterPrompt = "Write the detailed narrative book prose to follow " + (i + 1) + " of " + subchapterCount + ", in the chapter titled '" + chapterTitle + "'. The expected chapter's plot is: " + chapterNode.GetFullContext() + ". The previous chapter was:" + previousText;
-                    Debug.WriteLine(subchapterPrompt);
-
-                    ChatResponse response = await session.SendMessageAsync(subchapterPrompt);
-
-                    subchapterContent = "\n\n" + response.Choices[0].Message.Content;
-
-                    ContentNode subchapterNode = new ContentNode()
+                    try
                     {
-                        Title = chapterTitle + ", Subchapter " + (sc + 1),
-                        FullPlot = response.Choices[0].Message.Content
-                    };
-
-                    previousText = subchapterContent;
-
-                    if (chapterNode != null)
+                        sections = JsonConvert.DeserializeObject<SubSections>(subsectionContents);
+                    }
+                    catch (Exception ex)
                     {
-                        chapterNode.AddChild(subchapterNode);
+                        MessageBox.Show("Error parsing JSON for subsection. " + ex.Message, "JSON Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        ProgressBar.Value = 0;
+                        break;
+                    }
+                    var chapterNode = bookIdea.FindNodeByTitle(chapterTitle);
+
+                    Act curAct = book.Acts[chapter.CurrentActNum - 1];
+
+                    int sc = 0;
+
+                    foreach (var s in sections.Sections)
+                    {
+
+                        ProgressBar.Value = osc * mult + 1;
+
+                        //string subchapterPrompt = "Write the detailed narrative book prose of 500 words for this section of chapter " + (cc + 1) + ", where the section plot is: " + s.SectionDetailedPlot + ". Write about EXACTLY what is specified in the section plot, do not deviate or expand. For reference, the overall chapter is called " + chapterTitle + ". " + CharacterSummary;
+                        // string subchapterPrompt = "To follow is a description of a narrative. I'd like to you expand upon it in more detail. Write the 200 word expansion like a novel with description, narrative and dialog. For some context, this section is part of chapter " + (cc + 1) + " in a book. The whole chapter is called: " + chapterTitle + ", and the book is called " + book.BookTitle + ", and " + CharacterSummary + ". Ok, the description to rewrite, expand on, embellish upon and write dialog for (in the past-tense, " + StyleBox.Text + " style of " + AuthorBox.Text + ") is: \"" + s.SectionDetailedPlot + "\". Write ONLY what is specified in the plot outline. Do not expand beyond the end of the plot outline. Write in the past tense ALWAYS please. Write now.";
+                        string subchapterPrompt = "To follow is a description of a narrative. I'd like to you expand upon it in more detail. Write the 200 word expansion like a novel with description, narrative and dialog. For some context, this section is part of chapter " + (cc + 1) + " in a book. The whole chapter is called: " + chapterTitle + ", and the book is called " + book.BookTitle + ", and " + GenerateCharacterSummaryForChapter(chapter) + ". Ok, the description to rewrite, expand on, embellish upon and write dialog for (in the past-tense, " + StyleBox.Text + " style of " + AuthorBox.Text + ") is: \"" + s.SectionDetailedPlot + "\". Write ONLY what is specified in the plot outline. Do not expand beyond the end of the plot outline. Write in the past tense ALWAYS please. Write now.";
+                        //string subchapterPrompt = "Write a detailed narrative book prose of 500 words for section " + (sc + 1) + " of " + subchapterCount + ", of chapter " + (cc + 1) + " in a book with " + book.SuggestedChapterCount + " chapters and " + NumActs + " acts. The current act is Act " + (chapter.CurrentActNum) + " with the plot: " + curAct.ActFullPlot + ". This section should follow the plot: \"" + s.SectionDetailedPlot + "\" and should not conclude the story. For reference, the overall chapter is called " + chapterTitle + " with the plot: " + chapterContext + ". " + CharacterSummary;
+                        //string subchapterPrompt = "Write the detailed narrative book prose for part " + (i + 1) + " of " + subchapterCount + ", of the chapter titled '" + chapterTitle + "'. The chapter's plot is: " + chapterNode.FullPlot + ". Follow the previous section, which was:" + previousText;
+                        //string subchapterPrompt = "Write the detailed narrative book prose to follow " + (i + 1) + " of " + subchapterCount + ", in the chapter titled '" + chapterTitle + "'. The expected chapter's plot is: " + chapterNode.GetFullContext() + ". The previous chapter was:" + previousText;
+                        Debug.WriteLine(subchapterPrompt);
+
+                        ChatResponse response;
+
+                        try
+                        {
+                            response = await session.SendMessageAsync(subchapterPrompt);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Error talking to server for narrative subsection creation. " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            ProgressBar.Value = 0;
+                            break;
+                        }
+
+
+                        string pattern = @"\s*[^.!?]*[.!?](?=\s*$)";
+                        string responseMinusLastSentence = Regex.Replace(response.Choices[0].Message.Content, pattern, "");
+                        subchapterContent = "\n" + responseMinusLastSentence;
+
+                        ContentNode subchapterNode = new ContentNode()
+                        {
+                            Title = chapterTitle + ", Subchapter " + (sc + 1),
+                            FullPlot = response.Choices[0].Message.Content
+                        };
+
+                        previousText = responseMinusLastSentence;
+
+                        if (chapterNode != null)
+                        {
+                            chapterNode.AddChild(subchapterNode);
+                        }
+
+                        BookTextBox.Text += Environment.NewLine + Environment.NewLine + responseMinusLastSentence;
+
+                        osc++;
+                        sc++;
                     }
 
-                    BookTextBox.Text += Environment.NewLine + Environment.NewLine + subchapterContent;
-
-                    osc++;
-                    sc++;
+                    // Combine the subchapter content to form the full chapter
+                    string fullChapter = chapterTitle + "\n" + subchapterContent + "\n\n";
+                    cc++;
+                    // Append the chapter to the final book content
+                    //BookTextBox.Text += fullChapter;
+                }
+                else
+                {
+                    MessageBox.Show("Couldn't parse JSON from ChatGPT in generation of book subsections. " + session._model + " may have sent malformed JSON.", "JSON Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Debug.WriteLine("Couldn't parse JSON from ChatGPT in generation of book subsections. " + session._model + " may have sent malformed JSON.");
+                    break;
                 }
 
-                // Combine the subchapter content to form the full chapter
-                string fullChapter = chapterTitle + "\n" + subchapterContent + "\n\n";
-                cc++;
-                // Append the chapter to the final book content
-                //BookTextBox.Text += fullChapter;
             }
 
             ProgressBar.Value = 0;
@@ -527,5 +785,6 @@ namespace BookWriterAI
         {
             GenerateIdeaButton.Enabled = true;
         }
+
     }
 }

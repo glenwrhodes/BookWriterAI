@@ -32,6 +32,7 @@
             splitContainer1 = new SplitContainer();
             OutlineTextBox = new TextBox();
             treeView1 = new TreeView();
+            GenerateTreeButton = new Button();
             GenerateIdeaButton = new Button();
             IdeaTextBox = new TextBox();
             groupBox2 = new GroupBox();
@@ -49,6 +50,10 @@
             GenerateBookButton = new Button();
             BookTextBox = new TextBox();
             ProgressBar = new ProgressBar();
+            label1 = new Label();
+            StyleBox = new ComboBox();
+            label2 = new Label();
+            AuthorBox = new ComboBox();
             groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -71,6 +76,7 @@
             // 
             groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             groupBox1.Controls.Add(splitContainer1);
+            groupBox1.Controls.Add(GenerateTreeButton);
             groupBox1.Controls.Add(GenerateIdeaButton);
             groupBox1.Location = new Point(16, 185);
             groupBox1.Name = "groupBox1";
@@ -115,6 +121,16 @@
             treeView1.Size = new Size(1448, 218);
             treeView1.TabIndex = 0;
             // 
+            // GenerateTreeButton
+            // 
+            GenerateTreeButton.Location = new Point(0, 214);
+            GenerateTreeButton.Name = "GenerateTreeButton";
+            GenerateTreeButton.Size = new Size(144, 34);
+            GenerateTreeButton.TabIndex = 3;
+            GenerateTreeButton.Text = "Generate Tree";
+            GenerateTreeButton.UseVisualStyleBackColor = true;
+            GenerateTreeButton.Click += GenerateTreeButton_Click;
+            // 
             // GenerateIdeaButton
             // 
             GenerateIdeaButton.Location = new Point(13, 28);
@@ -128,11 +144,11 @@
             // IdeaTextBox
             // 
             IdeaTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            IdeaTextBox.Location = new Point(144, 30);
+            IdeaTextBox.Location = new Point(178, 30);
             IdeaTextBox.Multiline = true;
             IdeaTextBox.Name = "IdeaTextBox";
             IdeaTextBox.ScrollBars = ScrollBars.Vertical;
-            IdeaTextBox.Size = new Size(1484, 68);
+            IdeaTextBox.Size = new Size(1450, 68);
             IdeaTextBox.TabIndex = 0;
             IdeaTextBox.TextChanged += IdeaTextBox_TextChanged;
             // 
@@ -274,9 +290,9 @@
             // 
             // GenerateBookButton
             // 
-            GenerateBookButton.Location = new Point(16, 1044);
+            GenerateBookButton.Location = new Point(16, 1178);
             GenerateBookButton.Name = "GenerateBookButton";
-            GenerateBookButton.Size = new Size(137, 34);
+            GenerateBookButton.Size = new Size(170, 34);
             GenerateBookButton.TabIndex = 4;
             GenerateBookButton.Text = "Generate Book";
             GenerateBookButton.UseVisualStyleBackColor = true;
@@ -285,12 +301,12 @@
             // BookTextBox
             // 
             BookTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            BookTextBox.Location = new Point(160, 1044);
+            BookTextBox.Location = new Point(199, 1044);
             BookTextBox.Multiline = true;
             BookTextBox.Name = "BookTextBox";
             BookTextBox.ReadOnly = true;
             BookTextBox.ScrollBars = ScrollBars.Vertical;
-            BookTextBox.Size = new Size(1488, 168);
+            BookTextBox.Size = new Size(1443, 168);
             BookTextBox.TabIndex = 5;
             // 
             // ProgressBar
@@ -301,11 +317,51 @@
             ProgressBar.Size = new Size(1632, 26);
             ProgressBar.TabIndex = 6;
             // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(18, 1042);
+            label1.Name = "label1";
+            label1.Size = new Size(49, 25);
+            label1.TabIndex = 7;
+            label1.Text = "Style";
+            // 
+            // StyleBox
+            // 
+            StyleBox.FormattingEnabled = true;
+            StyleBox.Location = new Point(12, 1069);
+            StyleBox.Name = "StyleBox";
+            StyleBox.Size = new Size(174, 33);
+            StyleBox.Sorted = true;
+            StyleBox.TabIndex = 8;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(16, 1104);
+            label2.Name = "label2";
+            label2.Size = new Size(67, 25);
+            label2.TabIndex = 7;
+            label2.Text = "Author";
+            // 
+            // AuthorBox
+            // 
+            AuthorBox.FormattingEnabled = true;
+            AuthorBox.Location = new Point(12, 1133);
+            AuthorBox.Name = "AuthorBox";
+            AuthorBox.Size = new Size(174, 33);
+            AuthorBox.Sorted = true;
+            AuthorBox.TabIndex = 8;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1674, 1265);
+            Controls.Add(AuthorBox);
+            Controls.Add(StyleBox);
+            Controls.Add(label2);
+            Controls.Add(label1);
             Controls.Add(ProgressBar);
             Controls.Add(BookTextBox);
             Controls.Add(GenerateBookButton);
@@ -363,5 +419,10 @@
         private TreeView treeView3;
         private SplitContainer splitContainer2;
         private TreeView treeView2;
+        private Label label1;
+        private ComboBox StyleBox;
+        private Label label2;
+        private ComboBox AuthorBox;
+        private Button GenerateTreeButton;
     }
 }

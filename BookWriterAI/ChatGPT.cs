@@ -115,6 +115,12 @@ namespace BookWriterAI
         [JsonPropertyName("ChapterFullPlot")]
         public string ChapterFullPlot { get; set; }
 
+        [JsonPropertyName("CurrentActNum")]
+        public int CurrentActNum { get; set; }
+
+        [JsonPropertyName("CharactersPresent")]
+        public List<CharacterDetail> CharactersPresent { get; set; }
+
     }
 
     public struct ChapterList
@@ -146,6 +152,9 @@ namespace BookWriterAI
 
         [JsonPropertyName("SectionDetailedPlot")]
         public string SectionDetailedPlot { get; set; }
+
+        [JsonPropertyName("CharactersPresent")]
+        public List<CharacterDetail> CharactersPresent { get; set; }
 
     }
 
@@ -188,6 +197,20 @@ namespace BookWriterAI
         [JsonPropertyName("FiveWordBio")]
         public string FiveWordBio { get; set; }
 
+        [JsonPropertyName("Role")]
+        public string Role { get; set; }
+
+        [JsonPropertyName("AlreadyIntroduced")]
+        public bool AlreadyIntroduced { get; set; }
+
+        [JsonPropertyName("ID")]
+        public int ID { get; set; }
+
+    }
+
+    public struct ContentNodes
+    {
+        public List<ContentNode> Contents { get; set; }
     }
 
     public class ContentNode
@@ -197,6 +220,7 @@ namespace BookWriterAI
         public string FullPlot { get; set; }
         public string Context { get; set; }
         public int Depth { get; set; }
+        public int Branches = 3;
 
         public List<ContentNode> Children { get; set; }
 
@@ -207,17 +231,26 @@ namespace BookWriterAI
         [Newtonsoft.Json.JsonIgnore]
         public ContentNode NextSibling { get; set; }
 
+        public delegate void ContentGeneratedHandler(string content);
+        public event ContentGeneratedHandler ContentGenerated;
 
         public string GetFullContext()
         {
+            string fullContext;
+
             if (Parent == null)
             {
-                return Context;
+                fullContext = Context;
             }
             else
             {
-                return Parent.GetFullContext() + " " + Context;
+                fullContext = Parent.GetFullContext() + " " + FullPlot;
             }
+
+            // Remove newlines and trim whitespace
+            fullContext = fullContext.Replace("\n", " ").Replace("\r", " ").Trim();
+
+            return fullContext;
         }
 
         public ContentNode()
@@ -239,26 +272,16 @@ namespace BookWriterAI
 
         public async Task GenerateContent(ChatSession session, int maxDepth, double temperature)
         {
-            // If at maximum depth, generate narrative/prose
-            if (Depth == maxDepth)
+            // First, generate the content for the current node
+            if (Depth != maxDepth)
             {
-                // ChatGPT prompt for generating the narrative/prose content
-                string prompt = "Write book content for " + Title + ". The context is: " + GetFullContext() + ".";
-                ChatResponse response = await session.SendMessageAsync(prompt);
-                FullPlot = response.Choices[0].Message.Content;
-            }
-            else
-            {
-                // ChatGPT prompt for generating the current node's content
-                string prompt = "Generate content for " + Title + ". The context is: " + GetFullContext() + ". Create sub-elements for this section.";
+                string prompt = "Generate content for \"" + Title + "\". The context is: \"" + GetFullContext() + "\". Create " + Branches + " detailed subsections for this section. Return the results as a JSON object with an array called Contents, with properties Title, Summary, FullPlot";
+                Debug.WriteLine(prompt);
                 ChatResponse response = await session.SendMessageAsync(prompt);
 
-                // Extract the generated content and create child nodes
-                // You can use any method to parse the response and create child nodes
-                //List<ContentNode> childNodes = ParseResponse(response);
-                List<ContentNode> childNodes = new List<ContentNode>();
+                ContentNodes tContents = JsonConvert.DeserializeObject<ContentNodes>(response.Choices[0].Message.Content);
+                List<ContentNode> childNodes = tContents.Contents;
 
-                // Set parent, depth, and sibling information for each child node
                 for (int i = 0; i < childNodes.Count; i++)
                 {
                     ContentNode childNode = childNodes[i];
@@ -274,16 +297,30 @@ namespace BookWriterAI
                     {
                         childNode.NextSibling = childNodes[i + 1];
                     }
+
+                    // Subscribe to the ContentGenerated event for each child node
+                    childNode.ContentGenerated += ContentGenerated;
                 }
 
-                // Add child nodes to the current node's Children list
                 Children.AddRange(childNodes);
+            }
 
-                // Recursively generate content for child nodes
+            // Now that the parent node's context is generated, generate content for child nodes recursively
+            if (Depth < maxDepth)
+            {
                 foreach (ContentNode childNode in Children)
                 {
                     await childNode.GenerateContent(session, maxDepth, temperature);
                 }
+            }
+            else
+            {
+                // At maximum depth, generate narrative/prose
+                string prompt = "Write narrative prose book content for " + Title + ". This must be novel prose in the style of Stephen King, with descriptions and dialog. The context is: " + GetFullContext() + ".";
+                Debug.WriteLine(prompt);
+                ChatResponse response = await session.SendMessageAsync(prompt);
+                FullPlot = response.Choices[0].Message.Content;
+                ContentGenerated?.Invoke(FullPlot);
             }
         }
 
@@ -324,10 +361,12 @@ namespace BookWriterAI
     {
         public string _apiKey;
         public string _model;
+        public int _maxTokens = 2048;
         public List<ChatMessage> messages;
         public int tokenCount = 0;
         public const int maxTokenCount = 7192;
         public const int responseTokenLimit = 1000;
+        public double _temperature = 0.8;
 
         public ChatSession(string model, string apiKey)
         {
@@ -366,47 +405,75 @@ namespace BookWriterAI
 
         public async Task<ChatResponse> SendMessageAsync(string content)
         {
-            // Add the user message to the list of messages
-            AddMessage("user", content);
-
-            // Create an instance of HttpClient to make the API request
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("Authorization", "Bearer " + _apiKey);
-            client.Timeout = TimeSpan.FromSeconds(300);
-
-            // Define the API request payload
-            ChatGPTRequest requestBody = new ChatGPTRequest
+            try
             {
-                Model = _model,
-                Temperature = 0.9f,
-                MaxTokens = 1024,
-                Messages = messages.ToArray()
-            };
+                // Add the user message to the list of messages
+                AddMessage("user", content);
 
-            // Set JsonSerializerOptions to use camelCase
-            var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                // Create an instance of HttpClient to make the API request
+                using HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + _apiKey);
+                client.Timeout = TimeSpan.FromSeconds(300);
 
-            // Serialize the request object to JSON
-            string jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
+                // Define the API request payload
+                ChatGPTRequest requestBody = new ChatGPTRequest
+                {
+                    Model = _model,
+                    Temperature = (float)_temperature,
+                    MaxTokens = _maxTokens,
+                    Messages = messages.ToArray()
+                };
 
-            // Prepare the request content
-            HttpContent contents = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+                // Set JsonSerializerOptions to use camelCase
+                var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-            // Make the API request and receive the response
-            HttpResponseMessage response = await client.PostAsync("https://api.openai.com/v1/chat/completions", contents);
+                // Serialize the request object to JSON
+                string jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody, jsonOptions);
 
-            // Read the response content as a string
-            string responseContent = await response.Content.ReadAsStringAsync();
+                // Prepare the request content
+                HttpContent contents = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
 
-            Debug.WriteLine(responseContent);
+                HttpResponseMessage response;
 
-            // Deserialize the response JSON to a ChatResponse object
-            ChatResponse chatResponse = System.Text.Json.JsonSerializer.Deserialize<ChatResponse>(responseContent, jsonOptions);
+                // Make the API request and receive the response
+                try
+                {
+                    response = await client.PostAsync("https://api.openai.com/v1/chat/completions", contents);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error talking to server. " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return new ChatResponse();
+                }
 
-            // Add the assistant message to the list of messages
-            AddMessage("assistant", chatResponse.Choices[0].Message.Content);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Error during API request: {response.StatusCode} - {response.ReasonPhrase}");
+                }
 
-            return chatResponse;
+                // Read the response content as a string
+                string responseContent = await response.Content.ReadAsStringAsync();
+
+                Debug.WriteLine(responseContent);
+
+                // Deserialize the response JSON to a ChatResponse object
+                ChatResponse chatResponse = System.Text.Json.JsonSerializer.Deserialize<ChatResponse>(responseContent, jsonOptions);
+
+                // Add the assistant message to the list of messages
+                AddMessage("assistant", chatResponse.Choices[0].Message.Content);
+
+                return chatResponse;
+            }
+            catch (HttpRequestException ex)
+            {
+                MessageBox.Show("An error occurred while connecting to the server. Please check your internet connection and try again. If the problem persists, the server might be down. Error details: " + ex.Message, "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("An unexpected error occurred. Please try again. Error details: " + ex.Message, "Unexpected Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
         }
     }
 }
