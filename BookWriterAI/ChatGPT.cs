@@ -1,4 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using iText.IO.Font.Constants;
+using iText.Kernel.Events;
+using iText.Kernel.Font;
+using iText.Kernel.Pdf.Canvas;
+using iText.Kernel.Pdf;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.Layout;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,11 +14,19 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using iText.Kernel.Font;
+using iText.Kernel.Geom;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.IO.Font.Constants;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace BookWriterAI
 {
 
+    // The struct for the GPT-3 response Message
     public struct ChatMessage
     {
         [JsonPropertyName("role")]
@@ -20,7 +36,7 @@ namespace BookWriterAI
         public string Content { get; set; }
     }
 
-
+    // The struct for the GPT-3 request
     public struct ChatGPTRequest
     {
         [JsonPropertyName("model")]
@@ -36,6 +52,7 @@ namespace BookWriterAI
         public ChatMessage[] Messages { get; set; }
     }
 
+    // The struct for the GPT-3 response
     public struct ChatResponse
     {
         [JsonPropertyName("id")]
@@ -54,6 +71,7 @@ namespace BookWriterAI
         public ChatUsage Usage { get; set; }
     }
 
+    // The struct for the GPT-3 response Choices
     public struct ChatChoice
     {
         [JsonPropertyName("index")]
@@ -66,6 +84,7 @@ namespace BookWriterAI
         public string FinishReason { get; set; }
     }
 
+    // The struct for the GPT-3 response Usage
     public struct ChatUsage
     {
         [JsonPropertyName("prompt_tokens")]
@@ -77,6 +96,18 @@ namespace BookWriterAI
         [JsonPropertyName("total_tokens")]
         public int TotalTokens { get; set; }
     }
+
+    // TODO: Finish this and integrate into main design
+    public struct BookSettings
+    {
+        public int MaxChapters { get; set; }
+
+        public int SubSectionsPerChapter { get; set; }
+
+        public int SubSubSectionSentences { get; set; }
+
+    }
+
 
     public struct Book
     {
@@ -121,6 +152,8 @@ namespace BookWriterAI
         [JsonPropertyName("CharactersPresent")]
         public List<CharacterDetail> CharactersPresent { get; set; }
 
+        [JsonPropertyName("Sections")]
+        public List<SubSection> Sections { get; set; } // TODO: Add this to the JSON
     }
 
     public struct ChapterList
@@ -155,6 +188,9 @@ namespace BookWriterAI
 
         [JsonPropertyName("CharactersPresent")]
         public List<CharacterDetail> CharactersPresent { get; set; }
+
+        [JsonPropertyName("GeneratedText")]
+        public string GeneratedText { get; set; }
 
     }
 
@@ -403,7 +439,7 @@ namespace BookWriterAI
             tokenCount = 0;
         }
 
-        public async Task<ChatResponse> SendMessageAsync(string content)
+        public async Task<ChatResponse> SendMessageAsync(string content, string context = "")
         {
             try
             {
@@ -413,7 +449,7 @@ namespace BookWriterAI
                 // Create an instance of HttpClient to make the API request
                 using HttpClient client = new HttpClient();
                 client.DefaultRequestHeaders.Add("Authorization", "Bearer " + _apiKey);
-                client.Timeout = TimeSpan.FromSeconds(300);
+                client.Timeout = TimeSpan.FromSeconds(600);
 
                 // Define the API request payload
                 ChatGPTRequest requestBody = new ChatGPTRequest
@@ -442,13 +478,13 @@ namespace BookWriterAI
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error talking to server. " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return new ChatResponse();
+                    //MessageBox.Show(context + ": Error talking to server. " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    throw new Exception($"{context}: Error talking to server: {ex.Message}");
                 }
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw new Exception($"Error during API request: {response.StatusCode} - {response.ReasonPhrase}");
+                    throw new Exception($"{context}: Error during ChatGPT API request: {response.StatusCode} - {response.ReasonPhrase}");
                 }
 
                 // Read the response content as a string
@@ -466,14 +502,40 @@ namespace BookWriterAI
             }
             catch (HttpRequestException ex)
             {
-                MessageBox.Show("An error occurred while connecting to the server. Please check your internet connection and try again. If the problem persists, the server might be down. Error details: " + ex.Message, "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(context + ": An error occurred while connecting to the server. Please check your internet connection and try again. If the problem persists, the server might be down. Error details: " + ex.Message, "Connection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("An unexpected error occurred. Please try again. Error details: " + ex.Message, "Unexpected Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(context + ": An unexpected error occurred. Please try again. Error details: " + ex.Message, "Unexpected Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
             }
         }
     }
+
+    public class PageNumberEventHandler : IEventHandler
+    {
+        public void HandleEvent(Event currentEvent)
+        {
+            PdfDocumentEvent docEvent = (PdfDocumentEvent)currentEvent;
+            PdfDocument pdfDoc = docEvent.GetDocument();
+            PdfPage page = docEvent.GetPage();
+            int pageNumber = pdfDoc.GetPageNumber(page);
+
+            PdfCanvas pdfCanvas = new PdfCanvas(page);
+            iText.Kernel.Geom.Rectangle pageSize = page.GetPageSize();
+            Canvas canvas = new Canvas(pdfCanvas, pageSize);
+
+            // Set the footer text
+            Paragraph footerText = new Paragraph($"Page {pageNumber}")
+                .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA))
+                .SetFontSize(9);
+
+            // Add the footer text to the bottom margin of the page
+            canvas.ShowTextAligned(footerText, pageSize.GetWidth() / 2, 20, TextAlignment.CENTER);
+
+            canvas.Close();
+        }
+    }
+
 }

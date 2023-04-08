@@ -54,6 +54,11 @@
             StyleBox = new ComboBox();
             label2 = new Label();
             AuthorBox = new ComboBox();
+            label3 = new Label();
+            ChapterUpDown = new NumericUpDown();
+            ChatTextBox = new TextBox();
+            button1 = new Button();
+            ChatOutputBox = new TextBox();
             groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
@@ -70,6 +75,7 @@
             splitContainer2.Panel1.SuspendLayout();
             splitContainer2.Panel2.SuspendLayout();
             splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)ChapterUpDown).BeginInit();
             SuspendLayout();
             // 
             // groupBox1
@@ -80,7 +86,7 @@
             groupBox1.Controls.Add(GenerateIdeaButton);
             groupBox1.Location = new Point(16, 185);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(1646, 267);
+            groupBox1.Size = new Size(1684, 267);
             groupBox1.TabIndex = 0;
             groupBox1.TabStop = false;
             groupBox1.Text = "Book Outline";
@@ -98,8 +104,8 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(treeView1);
-            splitContainer1.Size = new Size(1482, 218);
-            splitContainer1.SplitterDistance = 30;
+            splitContainer1.Size = new Size(1512, 218);
+            splitContainer1.SplitterDistance = 31;
             splitContainer1.TabIndex = 4;
             // 
             // OutlineTextBox
@@ -110,7 +116,7 @@
             OutlineTextBox.Name = "OutlineTextBox";
             OutlineTextBox.ReadOnly = true;
             OutlineTextBox.ScrollBars = ScrollBars.Vertical;
-            OutlineTextBox.Size = new Size(30, 218);
+            OutlineTextBox.Size = new Size(31, 218);
             OutlineTextBox.TabIndex = 2;
             // 
             // treeView1
@@ -118,7 +124,7 @@
             treeView1.Dock = DockStyle.Fill;
             treeView1.Location = new Point(0, 0);
             treeView1.Name = "treeView1";
-            treeView1.Size = new Size(1448, 218);
+            treeView1.Size = new Size(1477, 218);
             treeView1.TabIndex = 0;
             // 
             // GenerateTreeButton
@@ -148,7 +154,7 @@
             IdeaTextBox.Multiline = true;
             IdeaTextBox.Name = "IdeaTextBox";
             IdeaTextBox.ScrollBars = ScrollBars.Vertical;
-            IdeaTextBox.Size = new Size(1450, 68);
+            IdeaTextBox.Size = new Size(1480, 68);
             IdeaTextBox.TabIndex = 0;
             IdeaTextBox.TextChanged += IdeaTextBox_TextChanged;
             // 
@@ -159,13 +165,14 @@
             groupBox2.Controls.Add(GenerateChapterButton);
             groupBox2.Location = new Point(16, 723);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1632, 315);
+            groupBox2.Size = new Size(1684, 315);
             groupBox2.TabIndex = 1;
             groupBox2.TabStop = false;
             groupBox2.Text = "Chapters";
             // 
             // splitContainer3
             // 
+            splitContainer3.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             splitContainer3.Location = new Point(144, 30);
             splitContainer3.Name = "splitContainer3";
             // 
@@ -176,8 +183,8 @@
             // splitContainer3.Panel2
             // 
             splitContainer3.Panel2.Controls.Add(treeView3);
-            splitContainer3.Size = new Size(1482, 271);
-            splitContainer3.SplitterDistance = 35;
+            splitContainer3.Size = new Size(1512, 271);
+            splitContainer3.SplitterDistance = 36;
             splitContainer3.TabIndex = 5;
             // 
             // ChapterTextBox
@@ -188,7 +195,7 @@
             ChapterTextBox.Name = "ChapterTextBox";
             ChapterTextBox.ReadOnly = true;
             ChapterTextBox.ScrollBars = ScrollBars.Vertical;
-            ChapterTextBox.Size = new Size(35, 271);
+            ChapterTextBox.Size = new Size(36, 271);
             ChapterTextBox.TabIndex = 4;
             // 
             // treeView3
@@ -196,7 +203,7 @@
             treeView3.Dock = DockStyle.Fill;
             treeView3.Location = new Point(0, 0);
             treeView3.Name = "treeView3";
-            treeView3.Size = new Size(1443, 271);
+            treeView3.Size = new Size(1472, 271);
             treeView3.TabIndex = 0;
             // 
             // GenerateChapterButton
@@ -216,7 +223,7 @@
             groupBox3.Controls.Add(IdeaTextBox);
             groupBox3.Location = new Point(16, 62);
             groupBox3.Name = "groupBox3";
-            groupBox3.Size = new Size(1646, 117);
+            groupBox3.Size = new Size(1684, 117);
             groupBox3.TabIndex = 2;
             groupBox3.TabStop = false;
             groupBox3.Text = "Idea";
@@ -238,13 +245,14 @@
             groupBox4.Controls.Add(GenerateActsButton);
             groupBox4.Location = new Point(16, 458);
             groupBox4.Name = "groupBox4";
-            groupBox4.Size = new Size(1646, 259);
+            groupBox4.Size = new Size(1684, 259);
             groupBox4.TabIndex = 3;
             groupBox4.TabStop = false;
             groupBox4.Text = "Acts";
             // 
             // splitContainer2
             // 
+            splitContainer2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             splitContainer2.Location = new Point(144, 33);
             splitContainer2.Name = "splitContainer2";
             // 
@@ -255,8 +263,8 @@
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(treeView2);
-            splitContainer2.Size = new Size(1482, 211);
-            splitContainer2.SplitterDistance = 33;
+            splitContainer2.Size = new Size(1512, 211);
+            splitContainer2.SplitterDistance = 34;
             splitContainer2.TabIndex = 6;
             // 
             // ActsText
@@ -267,7 +275,7 @@
             ActsText.Name = "ActsText";
             ActsText.ReadOnly = true;
             ActsText.ScrollBars = ScrollBars.Vertical;
-            ActsText.Size = new Size(33, 211);
+            ActsText.Size = new Size(34, 211);
             ActsText.TabIndex = 4;
             // 
             // treeView2
@@ -275,7 +283,7 @@
             treeView2.Dock = DockStyle.Fill;
             treeView2.Location = new Point(0, 0);
             treeView2.Name = "treeView2";
-            treeView2.Size = new Size(1445, 211);
+            treeView2.Size = new Size(1474, 211);
             treeView2.TabIndex = 0;
             // 
             // GenerateActsButton
@@ -290,9 +298,9 @@
             // 
             // GenerateBookButton
             // 
-            GenerateBookButton.Location = new Point(16, 1178);
+            GenerateBookButton.Location = new Point(199, 1132);
             GenerateBookButton.Name = "GenerateBookButton";
-            GenerateBookButton.Size = new Size(170, 34);
+            GenerateBookButton.Size = new Size(181, 34);
             GenerateBookButton.TabIndex = 4;
             GenerateBookButton.Text = "Generate Book";
             GenerateBookButton.UseVisualStyleBackColor = true;
@@ -301,20 +309,21 @@
             // BookTextBox
             // 
             BookTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            BookTextBox.Location = new Point(199, 1044);
+            BookTextBox.Location = new Point(12, 1172);
             BookTextBox.Multiline = true;
             BookTextBox.Name = "BookTextBox";
             BookTextBox.ReadOnly = true;
             BookTextBox.ScrollBars = ScrollBars.Vertical;
-            BookTextBox.Size = new Size(1443, 168);
+            BookTextBox.Size = new Size(367, 88);
             BookTextBox.TabIndex = 5;
             // 
             // ProgressBar
             // 
-            ProgressBar.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            ProgressBar.Location = new Point(16, 1227);
+            ProgressBar.Dock = DockStyle.Bottom;
+            ProgressBar.Location = new Point(0, 1276);
+            ProgressBar.MarqueeAnimationSpeed = 10;
             ProgressBar.Name = "ProgressBar";
-            ProgressBar.Size = new Size(1632, 26);
+            ProgressBar.Size = new Size(1712, 26);
             ProgressBar.TabIndex = 6;
             // 
             // label1
@@ -353,14 +362,69 @@
             AuthorBox.Sorted = true;
             AuthorBox.TabIndex = 8;
             // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(200, 1042);
+            label3.Name = "label3";
+            label3.Size = new Size(140, 25);
+            label3.TabIndex = 7;
+            label3.Text = "Starting Chapter";
+            label3.Click += label3_Click;
+            // 
+            // ChapterUpDown
+            // 
+            ChapterUpDown.Location = new Point(200, 1071);
+            ChapterUpDown.Maximum = new decimal(new int[] { 1, 0, 0, 0 });
+            ChapterUpDown.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            ChapterUpDown.Name = "ChapterUpDown";
+            ChapterUpDown.Size = new Size(180, 31);
+            ChapterUpDown.TabIndex = 9;
+            ChapterUpDown.Value = new decimal(new int[] { 1, 0, 0, 0 });
+            ChapterUpDown.ValueChanged += ChapterUpDown_ValueChanged;
+            // 
+            // ChatTextBox
+            // 
+            ChatTextBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            ChatTextBox.Location = new Point(385, 1229);
+            ChatTextBox.Name = "ChatTextBox";
+            ChatTextBox.Size = new Size(1184, 31);
+            ChatTextBox.TabIndex = 10;
+            // 
+            // button1
+            // 
+            button1.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            button1.Location = new Point(1575, 1229);
+            button1.Name = "button1";
+            button1.Size = new Size(112, 34);
+            button1.TabIndex = 11;
+            button1.Text = "Send";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
+            // ChatOutputBox
+            // 
+            ChatOutputBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            ChatOutputBox.Location = new Point(385, 1044);
+            ChatOutputBox.Multiline = true;
+            ChatOutputBox.Name = "ChatOutputBox";
+            ChatOutputBox.ScrollBars = ScrollBars.Vertical;
+            ChatOutputBox.Size = new Size(1302, 179);
+            ChatOutputBox.TabIndex = 12;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1674, 1265);
+            ClientSize = new Size(1712, 1302);
+            Controls.Add(ChatOutputBox);
+            Controls.Add(button1);
+            Controls.Add(ChatTextBox);
+            Controls.Add(ChapterUpDown);
             Controls.Add(AuthorBox);
             Controls.Add(StyleBox);
             Controls.Add(label2);
+            Controls.Add(label3);
             Controls.Add(label1);
             Controls.Add(ProgressBar);
             Controls.Add(BookTextBox);
@@ -392,6 +456,7 @@
             splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
             splitContainer2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)ChapterUpDown).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -424,5 +489,10 @@
         private Label label2;
         private ComboBox AuthorBox;
         private Button GenerateTreeButton;
+        private Label label3;
+        private NumericUpDown ChapterUpDown;
+        private TextBox ChatTextBox;
+        private Button button1;
+        private TextBox ChatOutputBox;
     }
 }
