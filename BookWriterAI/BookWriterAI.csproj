@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Alex75.JsonViewer" Version="0.2.7178.36312" />
     <PackageReference Include="DocX" Version="2.4.0" />
     <PackageReference Include="itext7" Version="7.2.5" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
