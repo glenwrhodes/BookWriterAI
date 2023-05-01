@@ -1,4 +1,4 @@
-# BookWriterAI
+# Book Writer AI
 
 This writes books using the OpenAI Chat API. Currently works for GPT3.5 and GPT4.
 
@@ -36,7 +36,11 @@ Finally, in step 4, it generates the content for each chapter, by breaking it do
 
 Context is maintained (still a work in progress), by feeding in the previous subchapter, as well as cast of characters, and several other pieces of data including what chapter it is, what act it is, and whether or not a character has been introduced or not. This is not a perfect system, and thus this is an open source project looking for collaborators to help make it better.
 
-There is also an unfinished system in place to instead use a node-based system that breaks things down into subtrees. This is, in theory, a more versatile system to be able to feed in context, and make longer books. So books are broken into n nodes, which are broken into n subnodes, which are broken into n subnodes, etc. The idea being that the context for any node can be provided by doing a traversal up the tree from that node. It's just a theory, again, so anyone is welcome to explore it further.
+# Node-based idea...
+
+There is also an unfinished system in place to instead use a node-based system that breaks things down into subtrees. This is, in theory, a more versatile system to be able to feed in context, and make longer books. So books are broken into n nodes, which are broken into n subnodes, which are broken into n subnodes, etc. The idea being that the context for any node can be provided by doing a traversal up the tree from that node. It's just a theory, again, so anyone is welcome to explore it further. The idea is that you should be able to use it to generate complex node-based structures for entire books with n-depth level of complexity. Here's an example image showing only 2 levels of depth.
+
+![](nodes.png)
 
 In general, GPT-4 produces better sounding narratives.
 
