@@ -1,6 +1,6 @@
 # BookWriterAI
 
-This writes books using the OpenAI Chat API. Currently works for GPT3.5 and GPT4.
+This writes books using the OpenAI Chat API. Currently works for GPT3.5 and GPT4. This is a Windows Forms application, although the methodologies could be applied to any development environment. Feel free to explore.
 
 Instructions - Getting started:
 
