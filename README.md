@@ -2,6 +2,8 @@
 
 This writes books using the OpenAI Chat API. Currently works for GPT3.5 and GPT4. This is a Windows Forms application, although the methodologies could be applied to any development environment. Feel free to explore.
 
+Lots of time (and cost) went into developing this tool to where it is today.
+
 Instructions - Getting started:
 
 * Open in Visual Studio 2022.
@@ -11,7 +13,10 @@ Instructions - Getting started:
 * Newtonsoft.Json
 
 Usage Instructions:
-* Run the BookWriterAI program
+* Run the BookWriterAI program from Visual Studio or build it.
+* First time use: Go to File->Properties and input your OpenAI Api Key (https://platform.openai.com/account/api-keys)
+* Enter the GPT model you'd like to use. As of 5/1/23, either gpt-3.5-turbo, or gpt-4
+* Choose a temperature. The product has been developed so far with a temperature of 0.5 
 * Type in an Idea for your book, or press Generate in the Idea area at the top. This can be detailed, or non-detailed. Example: "A retired detective discovers a hidden portal to an alternate reality where unsolved crimes are the key to maintaining cosmic balance, forcing her to solve cold cases to prevent chaos in both worlds."
 1. In the **Book Outline** section, press Generate.
 2. In the **Acts** area, press Generate.
