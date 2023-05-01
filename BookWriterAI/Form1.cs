@@ -372,7 +372,7 @@ namespace BookWriterAI
             book.Chapters = new List<Chapter>();
 
             string model = "gpt-4";
-            string apiKey = "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";
+            string apiKey = "sk-YOUR_API_KEY";
 
             // Create a new ChatSession instance
             session = new ChatSession(model, apiKey);
