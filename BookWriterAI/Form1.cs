@@ -37,7 +37,7 @@ namespace BookWriterAI
     {
 
 
-
+//
         // The ChatSession instance
         public ChatSession session = new ChatSession("", "");
 
