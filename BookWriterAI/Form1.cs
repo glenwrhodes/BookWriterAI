@@ -36,8 +36,6 @@ namespace BookWriterAI
     public partial class Form1 : Form
     {
 
-
-
         // The ChatSession instance
         public ChatSession session = new ChatSession("", "");
 
@@ -182,8 +180,6 @@ namespace BookWriterAI
             
         }
 
-
-
         public void ExportBookToDocX(Book book, string fileName)
         {
 
@@ -272,7 +268,6 @@ namespace BookWriterAI
             }
 
         }
-
 
         public void ExportBook(Book book)
         {
@@ -698,9 +693,6 @@ namespace BookWriterAI
 
             AuthorBox.Items.AddRange(popularAuthors);
             AuthorBox.Items.AddRange(modernAuthors);
-
-
-
         }
 
         private async Task<string> SendMessageAsync(string message)

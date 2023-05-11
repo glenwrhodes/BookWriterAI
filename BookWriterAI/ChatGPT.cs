@@ -7,21 +7,10 @@ using iText.Layout.Element;
 using iText.Layout.Properties;
 using iText.Layout;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using iText.Kernel.Font;
-using iText.Kernel.Geom;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Element;
-using iText.Layout.Properties;
-using iText.IO.Font.Constants;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace BookWriterAI
 {
@@ -108,7 +97,6 @@ namespace BookWriterAI
 
     }
 
-
     public struct Book
     {
         [JsonPropertyName("BookTitle")]
@@ -133,7 +121,6 @@ namespace BookWriterAI
         public List<Chapter> Chapters { get; set; }
 
     }
-
 
     public struct Chapter
     {
