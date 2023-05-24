@@ -36,6 +36,8 @@ namespace BookWriterAI
     public partial class Form1 : Form
     {
 
+
+//
         // The ChatSession instance
         public ChatSession session = new ChatSession("", "");
 
