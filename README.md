@@ -45,6 +45,8 @@ Context is maintained (still a work in progress), by feeding in the previous sub
 
 There is also an unfinished system in place to instead use a node-based system that breaks things down into subtrees. This is, in theory, a more versatile system to be able to feed in context, and make longer books. So books are broken into n nodes, which are broken into n subnodes, which are broken into n subnodes, etc. The idea being that the context for any node can be provided by doing a traversal up the tree from that node. It's just a theory, again, so anyone is welcome to explore it further. The idea is that you should be able to use it to generate complex node-based structures for entire books with n-depth level of complexity. Here's an example image showing only 2 levels of depth.
 
+See the *[WIKI](https://github.com/glenwrhodes/BookWriterAI/wiki)* page for more detailss.
+
 ![](nodes.png)
 
 In general, GPT-4 produces better sounding narratives.
